@@ -1,0 +1,76 @@
+================================================================================
+            DOCUMENTACIÓN: ESCÁNER DE RED PRO - REAL TIME
+================================================================================
+
+Este proyecto es una herramienta de monitoreo de red local diseñada para 
+funcionar en entornos Windows, incluso si no se cuenta con controladores de 
+bajo nivel (Npcap).
+
+--------------------------------------------------------------------------------
+1. ESTRUCTURA GENERAL
+--------------------------------------------------------------------------------
+El código está escrito en Python y utiliza las siguientes librerías principales:
+- Tkinter: Para la interfaz gráfica de usuario (GUI).
+- Scapy: Para el escaneo avanzado mediante protocolos ARP.
+- Concurrent.futures: Para realizar pings masivos en paralelo (multi-hilo).
+- Subprocess: Para interactuar con comandos del sistema (ping, arp, nbtstat).
+
+--------------------------------------------------------------------------------
+2. COMPONENTES DEL CÓDIGO Y SUS FUNCIONES
+--------------------------------------------------------------------------------
+
+A. Bloque de Inicialización (NPCAP_AVAILABLE):
+   Detecta si el sistema tiene instalado Npcap o WinPcap. Si no está presente, 
+   marca una bandera para activar el "Modo de Compatibilidad".
+
+B. Clase NetworkScannerGUI:
+   Controla toda la aplicación. Sus métodos principales son:
+
+   - __init__: Configura la ventana, inicializa las variables de estado (como 
+     la lista de dispositivos y contadores de fallos) y carga datos antiguos 
+     desde el archivo CSV.
+
+   - setup_ui: Crea visualmente los botones, el campo de rango IP, las etiquetas 
+     de estado y la tabla (Treeview) donde se ven los dispositivos.
+
+   - get_local_ip_range: Detecta automáticamente la IP de tu computadora y 
+     calcula el rango de red (ej. 192.168.1.0/24).
+
+   - toggle_scan: Es el interruptor del botón principal. Inicia o detiene el 
+     hilo de escaneo para que la ventana no se congele mientras busca.
+
+C. Lógica de Escaneo (scan_network):
+   Es el "corazón" del programa. Funciona en un bucle infinito mientras el 
+   escaneo esté activo:
+   1. Intenta usar Scapy (ARP) por ser el método más preciso.
+   2. Si falla (por falta de Npcap), activa el FALLBACK:
+      - Envía pings rápidos a todas las IPs del rango usando 50 hilos.
+      - Lee la tabla ARP de Windows (arp -a) para ver quién respondió.
+   3. Aplica un "Periodo de Gracia": Si un dispositivo no responde, espera 
+      3 ciclos antes de marcarlo como INACTIVO para evitar falsos negativos.
+
+D. Resolución de Nombres (get_hostname):
+   Intenta identificar el nombre del dispositivo usando tres niveles:
+   1. DNS local (gethostbyaddr).
+   2. FQDN (Nombre de dominio).
+   3. NetBIOS (nbtstat): Ejecuta un comando interno de Windows para preguntar 
+      directamente al dispositivo su nombre de red.
+
+E. Persistencia (save_to_csv / load_from_csv):
+   Guarda automáticamente todos los hallazgos en "inventario_red.csv". Esto 
+   permite cerrar el programa y mantener el historial de cuándo se vio un 
+   dispositivo por primera vez.
+
+--------------------------------------------------------------------------------
+3. ARCHIVOS DEL PROYECTO
+--------------------------------------------------------------------------------
+- network_scanner.py: El programa ejecutable.
+- inventario_red.csv: Base de datos en formato texto de los dispositivos.
+- DOCUMENTACION.txt: Este archivo explicativo.
+
+--------------------------------------------------------------------------------
+NOTAS DE SEGURIDAD:
+El escaneo ARP es una técnica legítima de administración de red, pero algunos 
+antivirus pueden alertar sobre el envío masivo de paquetes. El programa es 
+completamente seguro y solo realiza consultas estándar de red.
+================================================================================
